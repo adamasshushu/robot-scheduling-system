@@ -1,0 +1,32 @@
+# Environment
+.env
+*.local
+
+# Go
+/bin/
+/vendor/
+*.exe
+*.test
+*.out
+
+# Node (frontend)
+rss-web/node_modules/
+rss-web/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+pgdata/
+miniodata/
+
+# Adamas local config (no API keys)
+agent/.env.local
+rss_dev.db

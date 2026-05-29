@@ -1,0 +1,98 @@
+# ── 机器人调度系统 — 开发环境 ──
+# docker compose up -d 一键启动所有依赖服务
+
+services:
+  # ── PostgreSQL 16 + TimescaleDB ──
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: rss-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: robot_scheduling
+      POSTGRES_USER: rss
+      POSTGRES_PASSWORD: rss_dev_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rss -d robot_scheduling"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Redis 7 ──
+  redis:
+    image: redis:7-alpine
+    container_name: rss-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # ── MQTT Broker (EMQX) — 机器人通信 ──
+  emqx:
+    image: emqx/emqx:latest
+    container_name: rss-emqx
+    restart: unless-stopped
+    ports:
+      - "1883:1883"   # MQTT
+      - "8083:8083"   # WebSocket MQTT
+      - "18083:18083" # Dashboard
+    environment:
+      EMQX_NAME: robot-scheduler
+      EMQX_HOST: emqx
+      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: admin_dev_2026
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── RabbitMQ — 内部消息队列 ──
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rss-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: rss
+      RABBITMQ_DEFAULT_PASS: rss_dev_2026
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MinIO — 对象存储 ──
+  minio:
+    image: minio/minio:latest
+    container_name: rss-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minio_dev_2026
+    command: server /data --console-address ":9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
+  miniodata:

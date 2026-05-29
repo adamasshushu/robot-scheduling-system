@@ -67,20 +67,23 @@ func main() {
 	// ── API v1 ──
 	v1 := r.Group("/api/v1")
 
-	// 公开路由（开发模式免认证）
-	robotH := handler.NewRobotHandler(db)
-	taskH := handler.NewTaskHandler(db)
+		// 公开路由
+		authH := handler.NewAuthHandler(db)
+		v1.POST("/login", authH.Login)
 
-	if cfg.DevMode {
-		// 开发模式：免 JWT 认证
-		log.Println("⚠️  DEV mode — auth disabled")
-		registerDevRoutes(v1, robotH, taskH)
-	} else {
-		// 生产模式：需要 JWT 认证
-		auth := v1.Group("")
-		auth.Use(middleware.AuthRequired())
-		registerRoutes(auth, robotH, taskH)
-	}
+		robotH := handler.NewRobotHandler(db)
+		taskH := handler.NewTaskHandler(db)
+
+		if cfg.DevMode {
+			// 开发模式：免 JWT 认证
+			log.Println("⚠️  DEV mode — auth disabled")
+			registerDevRoutes(v1, robotH, taskH)
+		} else {
+			// 生产模式：需要 JWT 认证
+			auth := v1.Group("")
+			auth.Use(middleware.AuthRequired())
+			registerRoutes(auth, robotH, taskH)
+		}
 
 	// ── 启动 ──
 	addr := fmt.Sprintf(":%s", cfg.Server.APIPort)

@@ -1,0 +1,30 @@
+/* ── 全局样式 ── */
+
+:root {
+  --rss-primary: #409eff;
+  --rss-success: #67c23a;
+  --rss-warning: #e6a23c;
+  --rss-danger: #f56c6c;
+  --rss-info: #909399;
+}
+
+body {
+  margin: 0;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* 页面通用 */
+.filter-bar {
+  margin-bottom: 0;
+}
+
+/* 暗黑模式微调 */
+html.dark .el-card {
+  background-color: var(--el-bg-color);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .el-aside { width: 64px !important; }
+  .kpi-row .el-col { flex: 0 0 50%; max-width: 50%; }
+}

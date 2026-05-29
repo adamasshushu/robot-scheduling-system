@@ -9,14 +9,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"github.com/adamasshushu/robot-scheduling-system/internal/model"
+	"github.com/adamasshushu/robot-scheduling-system/internal/service"
 )
 
 type TaskHandler struct {
-	db *gorm.DB
+	db        *gorm.DB
+	scheduler *service.Scheduler
 }
 
-func NewTaskHandler(db *gorm.DB) *TaskHandler {
-	return &TaskHandler{db: db}
+func NewTaskHandler(db *gorm.DB, scheduler *service.Scheduler) *TaskHandler {
+	return &TaskHandler{db: db, scheduler: scheduler}
 }
 
 // List 任务列表
@@ -111,21 +113,11 @@ func (h *TaskHandler) Assign(c *gin.Context) {
 
 	var input struct {
 		RobotID uint `json:"robot_id"`
-		Auto    bool `json:"auto"` // 智能指派
+		Auto    bool `json:"auto"`
 	}
 	c.ShouldBindJSON(&input)
 
-	// 智能指派：找到最空闲的机器人
-	if input.Auto {
-		var robot model.Robot
-		if err := h.db.Where("status = ? AND battery_pct > ?", "standby", 20).
-			Order("battery_pct DESC").First(&robot).Error; err != nil {
-			c.JSON(http.StatusNotFound, model.Error(404, "no available robot found"))
-			return
-		}
-		input.RobotID = robot.ID
-	}
-
+	// 先获取 task
 	var task model.Task
 	if err := h.db.First(&task, taskID).Error; err != nil {
 		c.JSON(http.StatusNotFound, model.Error(404, "task not found"))
@@ -137,6 +129,16 @@ func (h *TaskHandler) Assign(c *gin.Context) {
 		return
 	}
 
+	// 智能指派：使用多因子评分算法
+	if input.Auto {
+		robot, err := h.scheduler.AutoAssign(&task)
+		if err != nil || robot == nil {
+			c.JSON(http.StatusNotFound, model.Error(404, "no available robot found (need standby + battery>20%)"))
+			return
+		}
+		input.RobotID = robot.ID
+	}
+
 	// 检查机器人是否存在
 	var robot model.Robot
 	if err := h.db.First(&robot, input.RobotID).Error; err != nil {
@@ -144,11 +146,10 @@ func (h *TaskHandler) Assign(c *gin.Context) {
 		return
 	}
 
-	updates := map[string]interface{}{
+	h.db.Model(&task).Updates(map[string]interface{}{
 		"robot_id": input.RobotID,
 		"status":   "assigned",
-	}
-	h.db.Model(&task).Updates(updates)
+	})
 
 	c.JSON(http.StatusOK, model.Success(task))
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/adamasshushu/robot-scheduling-system/internal/handler"
 	"github.com/adamasshushu/robot-scheduling-system/internal/middleware"
 	"github.com/adamasshushu/robot-scheduling-system/internal/model"
+	"github.com/adamasshushu/robot-scheduling-system/internal/service"
 )
 
 func main() {
@@ -50,6 +51,13 @@ func main() {
 	seedAdmin(db)
 	seedRobots(db)
 
+	// ── 初始化服务 ──
+	alertEngine := service.NewAlertEngine(db)
+	scheduler := service.NewScheduler(db)
+
+	// 启动告警引擎（后台 10s 检查）
+	alertEngine.Start()
+
 	// ── Router ──
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
@@ -67,23 +75,23 @@ func main() {
 	// ── API v1 ──
 	v1 := r.Group("/api/v1")
 
-		// 公开路由
-		authH := handler.NewAuthHandler(db)
-		v1.POST("/login", authH.Login)
+	// 公开路由
+	authH := handler.NewAuthHandler(db)
+	v1.POST("/login", authH.Login)
 
-		robotH := handler.NewRobotHandler(db)
-		taskH := handler.NewTaskHandler(db)
+	robotH := handler.NewRobotHandler(db)
+	taskH := handler.NewTaskHandler(db, scheduler)
+	alertH := handler.NewAlertHandler(db)
+	reportH := handler.NewReportHandler(db)
 
-		if cfg.DevMode {
-			// 开发模式：免 JWT 认证
-			log.Println("⚠️  DEV mode — auth disabled")
-			registerDevRoutes(v1, robotH, taskH)
-		} else {
-			// 生产模式：需要 JWT 认证
-			auth := v1.Group("")
-			auth.Use(middleware.AuthRequired())
-			registerRoutes(auth, robotH, taskH)
-		}
+	if cfg.DevMode {
+		log.Println("⚠️  DEV mode — auth disabled")
+		registerDevRoutes(v1, robotH, taskH, alertH, reportH)
+	} else {
+		auth := v1.Group("")
+		auth.Use(middleware.AuthRequired())
+		registerRoutes(auth, robotH, taskH, alertH, reportH)
+	}
 
 	// ── 启动 ──
 	addr := fmt.Sprintf(":%s", cfg.Server.APIPort)
@@ -93,7 +101,7 @@ func main() {
 	}
 }
 
-func registerRoutes(rg *gin.RouterGroup, robotH *handler.RobotHandler, taskH *handler.TaskHandler) {
+func registerRoutes(rg *gin.RouterGroup, robotH *handler.RobotHandler, taskH *handler.TaskHandler, alertH *handler.AlertHandler, reportH *handler.ReportHandler) {
 	// 机器人管理
 	rg.GET("/robots", robotH.List)
 	rg.GET("/robots/:id", robotH.Get)
@@ -101,6 +109,7 @@ func registerRoutes(rg *gin.RouterGroup, robotH *handler.RobotHandler, taskH *ha
 	rg.PUT("/robots/:id", robotH.Update)
 	rg.DELETE("/robots/:id", robotH.Delete)
 	rg.POST("/robots/:id/commands", robotH.SendCommand)
+	rg.GET("/robots/:id/telemetry", reportH.RobotTelemetry)
 
 	// 任务调度
 	rg.GET("/tasks", taskH.List)
@@ -108,13 +117,24 @@ func registerRoutes(rg *gin.RouterGroup, robotH *handler.RobotHandler, taskH *ha
 	rg.POST("/tasks", taskH.Create)
 	rg.POST("/tasks/:id/assign", taskH.Assign)
 	rg.POST("/tasks/:id/cancel", taskH.Cancel)
+
+	// 告警管理
+	rg.GET("/alerts", alertH.List)
+	rg.POST("/alerts/:id/ack", alertH.Ack)
+	rg.POST("/alerts/:id/resolve", alertH.Resolve)
+	rg.GET("/alerts/stats", alertH.Stats)
+
+	// 监控 & 报表
+	rg.GET("/monitor/dashboard", reportH.Dashboard)
+	rg.GET("/monitor/robots/online", reportH.OnlineRobots)
+	rg.GET("/monitor/map/robots", reportH.MapRobots)
+	rg.GET("/reports/tasks", reportH.TaskStats)
 }
 
-func registerDevRoutes(rg *gin.RouterGroup, robotH *handler.RobotHandler, taskH *handler.TaskHandler) {
-	registerRoutes(rg, robotH, taskH)
+func registerDevRoutes(rg *gin.RouterGroup, robotH *handler.RobotHandler, taskH *handler.TaskHandler, alertH *handler.AlertHandler, reportH *handler.ReportHandler) {
+	registerRoutes(rg, robotH, taskH, alertH, reportH)
 }
 
-// seedAdmin 创建默认管理员
 func seedAdmin(db *gorm.DB) {
 	var count int64
 	db.Model(&model.User{}).Where("username = ?", "admin").Count(&count)
@@ -128,7 +148,6 @@ func seedAdmin(db *gorm.DB) {
 	}
 }
 
-// seedRobots 创建示例机器人
 func seedRobots(db *gorm.DB) {
 	var count int64
 	db.Model(&model.Robot{}).Count(&count)

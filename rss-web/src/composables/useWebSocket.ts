@@ -48,13 +48,21 @@ export function useWebSocket() {
 
         switch (msg.type) {
           case 'alert':
+          case 'robot_alert':
             alerts.value.unshift(msg.data)
             if (alerts.value.length > 50) alerts.value.pop()
             break
           case 'telemetry':
           case 'robot_status':
-            if (msg.data?.robot_id) {
-              robotUpdates.value = { ...robotUpdates.value, [msg.data.robot_id]: msg.data }
+            // MQTT 上报用 robot_code 做 key
+            const key = msg.data?.robot_code || msg.data?.robot_id || 'unknown'
+            if (key !== 'unknown') {
+              robotUpdates.value = { ...robotUpdates.value, [key]: msg.data }
+            }
+            break
+          case 'robot_offline':
+            if (msg.data?.robot_code) {
+              robotUpdates.value = { ...robotUpdates.value, [msg.data.robot_code]: { robot_code: msg.data.robot_code, status: 'offline' } }
             }
             break
         }

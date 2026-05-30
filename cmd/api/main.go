@@ -75,6 +75,9 @@ func main() {
 	// 启动告警引擎（后台 10s 检查）
 	alertEngine.Start()
 
+	// ── MQTT 桥接 (机器人底盘接入) ──
+	mqttBridge := service.NewMQTTBridge(db, service.Hub)
+
 	// ── Router ──
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -133,6 +136,22 @@ func main() {
 		auth.Use(middleware.AuthRequired())
 		registerRoutes(auth, robotH, taskH, alertH, reportH, settingsH, mapH, centerH, otaH)
 	}
+
+	// ── MQTT 机器人指令 ──
+	v1.POST("/mqtt/command", func(c *gin.Context) {
+		var cmd service.RobotCommand
+		if c.ShouldBindJSON(&cmd) != nil || cmd.Command == "" {
+			c.JSON(http.StatusBadRequest, model.Error(400, "invalid command"))
+			return
+		}
+		robotCode := c.Query("robot_code")
+		if robotCode == "" {
+			c.JSON(http.StatusBadRequest, model.Error(400, "robot_code required"))
+			return
+		}
+		mqttBridge.PublishCommand(robotCode, cmd)
+		c.JSON(http.StatusOK, model.Success(gin.H{"robot_code": robotCode, "command": cmd.Command}))
+	})
 
 	// ── 启动 ──
 	addr := fmt.Sprintf(":%s", cfg.Server.APIPort)

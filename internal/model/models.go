@@ -188,10 +188,15 @@ type Alert struct {
 	AlertType      string    `gorm:"size:32" json:"alert_type"`
 	Severity       string    `gorm:"size:16" json:"severity"`
 	RobotID        *uint     `json:"robot_id"`
+	RobotCode      string    `gorm:"size:64" json:"robot_code"`
 	Robot          *Robot    `gorm:"foreignKey:RobotID" json:"robot,omitempty"`
 	TaskID         *uint     `json:"task_id"`
 	Title          string    `gorm:"size:256" json:"title"`
 	Content        string    `gorm:"type:text" json:"content"`
+	Level          string    `gorm:"size:16" json:"level"`     // info/warning/error/critical
+	Type           string    `gorm:"size:32" json:"type"`      // battery/collision/sensor/motor/system
+	Message        string    `gorm:"size:512" json:"message"`
+	Data           string    `gorm:"type:text" json:"data"`
 	Status         string    `gorm:"size:16;default:unack" json:"status"`
 	AcknowledgedBy *uint     `json:"acknowledged_by"`
 	AcknowledgedAt *time.Time `json:"acknowledged_at"`

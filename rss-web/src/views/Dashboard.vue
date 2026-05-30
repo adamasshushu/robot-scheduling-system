@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { getRobots, getTasks } from '@/api'
 import { useWebSocket } from '@/composables/useWebSocket'
 
@@ -8,13 +8,20 @@ const runningTasks = ref<any[]>([])
 const wsConnected = ref(false)
 const wsAlertCount = ref(0)
 
-const { connected, alerts: wsAlerts } = useWebSocket()
+const { connected, alerts: wsAlerts, robotUpdates } = useWebSocket()
 
 watch(connected, (v) => { wsConnected.value = v })
 watch(wsAlerts, (a) => {
   wsAlertCount.value = a.length
-  stats.value.alerts = a.filter((x: any) => x.status === 'unack').length
+  stats.value.alerts = a.filter((x: any) => x.status === 'unack' || x.status === 'active').length
 }, { deep: true })
+
+// 将 robotUpdates 转为列表
+const liveRobots = computed(() => {
+  return Object.values(robotUpdates.value).sort((a: any, b: any) =>
+    (a.robot_code || '').localeCompare(b.robot_code || '')
+  )
+})
 
 onMounted(async () => {
   try {
@@ -26,7 +33,7 @@ onMounted(async () => {
     const tasks = tasksRes.data.data?.list || []
     stats.value = {
       robots: robots.length,
-      online: robots.filter((r: any) => r.comm_status === 'online').length,
+      online: robots.filter((r: any) => r.comm_status === 'online' || r.status === 'running').length,
       tasks: tasks.length,
       completed: tasks.filter((t: any) => t.status === 'completed').length,
       alerts: wsAlertCount.value,
@@ -41,7 +48,7 @@ onMounted(async () => {
     <!-- 连接状态条 -->
     <div class="ws-status" :class="{ connected: wsConnected }">
       <span class="ws-dot"></span>
-      {{ wsConnected ? '🔗 实时连接已建立' : '⏳ 正在连接实时推送...' }}
+      {{ wsConnected ? '🔗 实时连接已建立 (MQTT + WebSocket)' : '⏳ 正在连接实时推送...' }}
     </div>
 
     <!-- KPI 卡片 -->
@@ -66,17 +73,43 @@ onMounted(async () => {
       </el-col>
     </el-row>
 
+    <!-- MQTT 实时机器人状态 -->
+    <el-card v-if="liveRobots.length" class="glass-card" style="margin-top: 16px;">
+      <template #header>
+        <span>🤖 MQTT 实时机器人 ({{ liveRobots.length }})</span>
+        <span style="margin-left:8px;font-size:11px;opacity:0.5;">来自底盘上报</span>
+      </template>
+      <div class="live-robot-grid">
+        <div v-for="r in liveRobots" :key="r.robot_code" class="live-robot-card"
+          :class="{ running: r.status === 'running', fault: r.status === 'fault', charging: r.status === 'charging' }">
+          <div class="lr-header">
+            <span class="lr-code">{{ r.robot_code }}</span>
+            <el-tag :type="r.status === 'running' ? 'success' : r.status === 'fault' ? 'danger' : r.status === 'charging' ? 'warning' : 'info'"
+              size="small" effect="dark">{{ r.status }}</el-tag>
+          </div>
+          <div class="lr-body">
+            <span>🔋 {{ r.battery_pct }}%</span>
+            <span>📍 ({{ r.location_x?.toFixed(1) }}, {{ r.location_y?.toFixed(1) }})</span>
+            <span v-if="r.speed">🚀 {{ r.speed }} m/s</span>
+          </div>
+          <el-progress :percentage="r.battery_pct || 0" :stroke-width="3"
+            :color="r.battery_pct > 20 ? '#67c23a' : '#f56c6c'" style="margin-top:4px" />
+        </div>
+      </div>
+    </el-card>
+
     <!-- 实时告警推送 -->
     <el-card v-if="wsAlerts.length" class="glass-card" style="margin-top: 16px;">
       <template #header>🔔 实时告警推送</template>
       <div class="alert-stream">
-        <div v-for="a in wsAlerts.slice(0, 5)" :key="a.id" class="alert-row"
-          :class="{ critical: a.severity === 'critical' }">
-          <el-tag :type="a.severity === 'critical' ? 'danger' : 'warning'" size="small" effect="dark">
-            {{ a.severity }}
+        <div v-for="a in wsAlerts.slice(0, 5)" :key="a.id || a.robot_code + a.timestamp" class="alert-row"
+          :class="{ critical: a.level === 'critical' || a.severity === 'critical' }">
+          <el-tag :type="(a.level || a.severity) === 'critical' ? 'danger' : 'warning'" size="small" effect="dark">
+            {{ a.level || a.severity }}
           </el-tag>
-          <span class="alert-title">{{ a.title }}</span>
-          <span class="alert-time">{{ a.created_at?.slice(11, 19) }}</span>
+          <span class="alert-robot">{{ a.robot_code }}</span>
+          <span class="alert-title">{{ a.message || a.title }}</span>
+          <span class="alert-time">{{ (a.created_at || a.timestamp)?.toString()?.slice?.(-8) || '' }}</span>
         </div>
       </div>
     </el-card>
@@ -89,7 +122,7 @@ onMounted(async () => {
           <div class="map-placeholder">
             <span class="map-icon">🗺️</span>
             <p>Leaflet 地图组件</p>
-            <span class="map-hint">等待配置地图服务后加载</span>
+            <span class="map-hint">等待配置地图服务后加载 — MQTT 位置数据已就绪</span>
           </div>
         </el-card>
       </el-col>
@@ -136,6 +169,22 @@ onMounted(async () => {
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 15px rgba(0,0,0,0.15);
 }
+
+/* MQTT 实时机器人卡片 */
+.live-robot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.live-robot-card {
+  padding: 10px 12px; border-radius: 10px;
+  background: rgba(255,255,255,0.04); border-left: 3px solid #409eff;
+  transition: all 0.3s;
+}
+.live-robot-card.running { border-left-color: #67c23a; background: rgba(103,194,58,0.08); }
+.live-robot-card.fault { border-left-color: #f56c6c; background: rgba(245,108,108,0.08); }
+.live-robot-card.charging { border-left-color: #e6a23c; background: rgba(230,162,60,0.08); }
+.lr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.lr-code { font-weight: 700; font-size: 14px; }
+.lr-body { display: flex; gap: 10px; font-size: 12px; color: var(--el-text-color-regular); flex-wrap: wrap; }
+
+/* 告警 */
 .alert-stream { display: flex; flex-direction: column; gap: 8px; }
 .alert-row {
   display: flex; align-items: center; gap: 10px;
@@ -144,8 +193,11 @@ onMounted(async () => {
   transition: background 0.3s;
 }
 .alert-row.critical { border-left-color: #f56c6c; background: rgba(245,108,108,0.06); }
+.alert-robot { font-size: 11px; color: var(--el-color-primary); font-weight: 600; min-width: 60px; }
 .alert-title { flex: 1; font-size: 13px; font-weight: 500; }
 .alert-time { font-size: 11px; color: var(--el-text-color-placeholder); }
+
+/* 地图 */
 .map-placeholder {
   height: 400px; border-radius: 12px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -155,6 +207,8 @@ onMounted(async () => {
 }
 .map-icon { font-size: 56px; margin-bottom: 8px; }
 .map-hint { font-size: 12px; opacity: 0.6; }
+
+/* 任务 */
 .task-item { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--el-border-color-lighter); }
 .task-item:last-child { border-bottom: none; }
 .task-code { font-weight: 600; font-size: 13px; color: var(--el-color-primary); }

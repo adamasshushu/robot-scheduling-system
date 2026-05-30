@@ -29,9 +29,9 @@ const router = createRouter({
         },
         {
           path: 'robots/:id',
-          name: 'RobotDetail',
-          component: () => import('@/views/RobotDetail.vue'),
-          meta: { title: '机器人详情', hidden: true },
+          name: 'RobotCenter',
+          component: () => import('@/views/RobotCenter.vue'),
+          meta: { title: '机器人管理中心', hidden: true },
         },
         {
           path: 'tasks',

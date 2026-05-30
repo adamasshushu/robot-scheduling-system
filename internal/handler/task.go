@@ -154,6 +154,43 @@ func (h *TaskHandler) Assign(c *gin.Context) {
 	c.JSON(http.StatusOK, model.Success(task))
 }
 
+// Update 更新任务
+// PUT /api/v1/tasks/:id
+func (h *TaskHandler) Update(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	var task model.Task
+	if h.db.First(&task, id).Error != nil {
+		c.JSON(http.StatusNotFound, model.Error(404, "task not found"))
+		return
+	}
+	var input map[string]interface{}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, model.Error(400, err.Error()))
+		return
+	}
+	// Only allow updating certain fields: task_type, target_location, description, priority
+	allowed := map[string]bool{"task_type": true, "target_location": true, "description": true, "priority": true}
+	updates := make(map[string]interface{})
+	for k, v := range input {
+		if allowed[k] {
+			updates[k] = v
+		}
+	}
+	h.db.Model(&task).Updates(updates)
+	c.JSON(http.StatusOK, model.Success(task))
+}
+
+// Delete 删除任务
+// DELETE /api/v1/tasks/:id
+func (h *TaskHandler) Delete(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if h.db.Delete(&model.Task{}, id).RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, model.Error(404, "task not found"))
+		return
+	}
+	c.JSON(http.StatusOK, model.Success(nil))
+}
+
 // Cancel 取消任务
 func (h *TaskHandler) Cancel(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)

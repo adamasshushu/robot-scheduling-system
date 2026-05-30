@@ -95,7 +95,7 @@ func Load() *Config {
 			Password: getEnv("MQTT_PASSWORD", ""),
 		},
 		JWT: JWTConfig{
-			Secret:        getEnv("JWT_SECRET", "rss-dev-secret"),
+			Secret:        getEnv("JWT_SECRET", "rss-jwt-secret-at-least-32-bytes-long-2026"),
 			Expiry:        getEnv("JWT_EXPIRY", "2h"),
 			RefreshExpiry: getEnv("REFRESH_TOKEN_EXPIRY", "168h"),
 		},
@@ -109,7 +109,7 @@ func Load() *Config {
 			SecretKey: getEnv("MINIO_SECRET_KEY", "minio_dev_2026"),
 			Bucket:    getEnv("MINIO_BUCKET", "robot-assets"),
 		},
-		DevMode: getEnv("DEV_MODE", "true") == "true",
+		DevMode: getEnv("DEV_MODE", "false") == "true",
 	}
 }
 

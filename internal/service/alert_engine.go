@@ -77,6 +77,7 @@ func (e *AlertEngine) checkBatteryLow() {
 			CreatedAt: time.Now(),
 		}
 		e.db.Create(&alert)
+		Hub.Broadcast(WSMessage{Type: "alert", Data: alert})
 		log.Printf("⚠️  [ALERT] battery_low | %s | %.1f%%", r.RobotCode, r.BatteryPct)
 	}
 }
@@ -111,6 +112,7 @@ func (e *AlertEngine) checkTaskTimeout() {
 			CreatedAt: time.Now(),
 		}
 		e.db.Create(&alert)
+		Hub.Broadcast(WSMessage{Type: "alert", Data: alert})
 		log.Printf("⚠️  [ALERT] task_timeout | %s | robot=%s", t.TaskCode, robotName)
 	}
 }
@@ -138,6 +140,7 @@ func (e *AlertEngine) checkCommLost() {
 			CreatedAt: time.Now(),
 		}
 		e.db.Create(&alert)
+		Hub.Broadcast(WSMessage{Type: "alert", Data: alert})
 		log.Printf("🚨 [ALERT] comm_lost | %s", r.RobotCode)
 	}
 }
@@ -166,6 +169,7 @@ func (e *AlertEngine) checkFaults() {
 			CreatedAt: time.Now(),
 		}
 		e.db.Create(&alert)
+		Hub.Broadcast(WSMessage{Type: "alert", Data: alert})
 		log.Printf("🚨 [ALERT] fault | %s", r.RobotCode)
 	}
 }

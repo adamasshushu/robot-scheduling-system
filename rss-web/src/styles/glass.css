@@ -1,0 +1,116 @@
+/* ============================================
+   🔮 Glassmorphism Design System
+   ============================================ */
+
+/* ── 玻璃卡片基础 ── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.3s ease;
+}
+.glass-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* ── 玻璃面板（无 hover） ── */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ── 玻璃侧边栏 ── */
+.glass-sidebar {
+  background: rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── 玻璃顶栏 ── */
+.glass-header {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── 渐变按钮 ── */
+.glass-btn {
+  background: linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%) !important;
+  border: none !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+.glass-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(108, 92, 231, 0.4) !important;
+}
+.glass-btn:active {
+  transform: translateY(0);
+}
+
+/* ── 暗色模式适配 ── */
+html.dark .glass-card {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+html.dark .glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4) !important;
+}
+html.dark .glass-panel {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+html.dark .glass-sidebar {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+html.dark .glass-header {
+  background: rgba(0, 0, 0, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ── KPI 数字动画 ── */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.kpi-animate {
+  animation: countUp 0.6s ease-out;
+}
+
+/* ── 页面背景渐变 ── */
+body {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+html.dark body {
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  background-attachment: fixed;
+}
+
+/* ── Element Plus card 头覆盖 ── */
+.glass-card .el-card__header,
+.glass-panel .el-card__header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  font-weight: 600;
+  font-size: 15px;
+}
+html.dark .glass-card .el-card__header,
+html.dark .glass-panel .el-card__header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}

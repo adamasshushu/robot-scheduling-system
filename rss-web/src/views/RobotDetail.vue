@@ -31,7 +31,7 @@ async function handleLight() {
     <el-row :gutter="16" style="margin-top: 16px;">
       <!-- 左：基础信息 -->
       <el-col :span="8">
-        <el-card>
+        <el-card class="glass-card">
           <template #header>📋 基本信息</template>
           <el-descriptions :column="1" border size="small">
             <el-descriptions-item label="编号">{{ robot.robot_code }}</el-descriptions-item>
@@ -44,7 +44,7 @@ async function handleLight() {
         </el-card>
 
         <!-- 电量卡片 -->
-        <el-card style="margin-top: 16px;">
+        <el-card class="glass-card" style="margin-top: 16px;">
           <template #header>🔋 电量</template>
           <div style="text-align: center;">
             <el-progress type="dashboard" :percentage="robot.battery_pct || 0" :color="robot.battery_pct > 20 ? '#67c23a' : '#f56c6c'" />
@@ -57,16 +57,16 @@ async function handleLight() {
 
       <!-- 中：状态 + 控制 -->
       <el-col :span="8">
-        <el-card>
+        <el-card class="glass-card">
           <template #header>📡 实时状态</template>
           <el-descriptions :column="1" border size="small">
             <el-descriptions-item label="运行模式">
-              <el-tag :type="robot.status === 'running' ? 'success' : 'info'">
+              <el-tag :type="robot.status === 'running' ? 'success' : 'info'" effect="dark">
                 {{ robot.status }}
               </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="通信">
-              <el-tag :type="robot.comm_status === 'online' ? 'success' : 'danger'">
+              <el-tag :type="robot.comm_status === 'online' ? 'success' : 'danger'" effect="dark">
                 {{ robot.comm_status || 'unknown' }}
               </el-tag>
             </el-descriptions-item>
@@ -77,10 +77,10 @@ async function handleLight() {
         </el-card>
 
         <!-- 控制按钮 -->
-        <el-card style="margin-top: 16px;">
+        <el-card class="glass-card" style="margin-top: 16px;">
           <template #header>🎮 快速控制</template>
           <el-space direction="vertical" style="width: 100%;">
-            <el-button type="success" style="width: 100%" @click="sendCommand(robot.id, 'start')">▶ 启动</el-button>
+            <el-button type="success" class="glass-btn" style="width: 100%" @click="sendCommand(robot.id, 'start')">▶ 启动</el-button>
             <el-button type="warning" style="width: 100%" @click="sendCommand(robot.id, 'pause')">⏸ 暂停</el-button>
             <el-button type="info" style="width: 100%" @click="sendCommand(robot.id, 'charge')">🔌 回充</el-button>
             <el-button type="danger" style="width: 100%" @click="sendCommand(robot.id, 'stop')">🛑 急停</el-button>
@@ -90,7 +90,7 @@ async function handleLight() {
 
       <!-- 右：灯光控制 -->
       <el-col :span="8">
-        <el-card>
+        <el-card class="glass-card">
           <template #header>💡 灯光控制</template>
           <el-form :model="lightForm" label-width="80px">
             <el-form-item label="模式">
@@ -108,7 +108,7 @@ async function handleLight() {
               <el-slider v-model="lightForm.brightness" :min="0" :max="100" />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" @click="handleLight" style="width: 100%;">发 送</el-button>
+              <el-button type="primary" class="glass-btn" @click="handleLight" style="width: 100%;">发 送</el-button>
             </el-form-item>
           </el-form>
         </el-card>

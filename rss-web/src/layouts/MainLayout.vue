@@ -26,7 +26,7 @@ const currentTitle = computed(() => route.meta.title || '机器人调度系统')
 <template>
   <el-container class="layout">
     <!-- 侧边栏 -->
-    <el-aside :width="isCollapse ? '64px' : '220px'" class="aside">
+    <el-aside :width="isCollapse ? '64px' : '220px'" class="aside glass-sidebar">
       <div class="logo">
         <span v-if="!isCollapse">🤖 RSS</span>
         <span v-else>🤖</span>
@@ -47,7 +47,7 @@ const currentTitle = computed(() => route.meta.title || '机器人调度系统')
     <!-- 主体 -->
     <el-container>
       <!-- 顶栏 -->
-      <el-header class="header">
+      <el-header class="header glass-header">
         <div class="header-left">
           <el-icon class="collapse-btn" @click="isCollapse = !isCollapse">
             <Fold v-if="!isCollapse" />

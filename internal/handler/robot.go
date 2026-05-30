@@ -38,7 +38,7 @@ func (h *RobotHandler) List(c *gin.Context) {
 	}
 
 	query.Count(&pag.Total)
-	query.Offset(pag.Offset()).Limit(pag.PageSize).Find(&robots)
+	query.Order("sort_order ASC, id ASC").Offset(pag.Offset()).Limit(pag.PageSize).Find(&robots)
 
 	c.JSON(http.StatusOK, model.Response{Code: 200, Message: "success", Data: gin.H{
 		"list":       robots,
@@ -70,7 +70,7 @@ func (h *RobotHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.db.Create(&robot).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, model.Error(500, "failed to create robot"))
+		c.JSON(http.StatusInternalServerError, model.Error(500, "failed to create robot: "+err.Error()))
 		return
 	}
 
@@ -114,6 +114,23 @@ func (h *RobotHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	c.JSON(http.StatusOK, model.Success(nil))
+}
+
+// SortRobots 批量更新机器人排序
+// PUT /api/v1/robots/sort
+func (h *RobotHandler) SortRobots(c *gin.Context) {
+	var items []struct {
+		ID        uint `json:"id"`
+		SortOrder int  `json:"sort_order"`
+	}
+	if err := c.ShouldBindJSON(&items); err != nil || len(items) == 0 {
+		c.JSON(http.StatusBadRequest, model.Error(400, "invalid input"))
+		return
+	}
+	for _, item := range items {
+		h.db.Model(&model.Robot{}).Where("id = ?", item.ID).Update("sort_order", item.SortOrder)
+	}
 	c.JSON(http.StatusOK, model.Success(nil))
 }
 
